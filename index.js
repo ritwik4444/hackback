@@ -50,10 +50,15 @@ const categoryPairing = {
 app.get("/recommendations/:style_id", async (req, res) => {
   try {
     const styleId = req.params.style_id;
+    const { gender } = req.query; 
 
     if (!styleId) {
       return res.status(400).json({ error: "Invalid style_id" });
     }
+
+    if (!gender) {
+        return res.status(400).json({ error: "Gender query parameter is required." });
+      }
 
     // Load CSV data dynamically
     const data = await loadCsvData();
@@ -82,7 +87,7 @@ app.get("/recommendations/:style_id", async (req, res) => {
     const recommendedDataArray = pairedCategories.map((pair) => {
       let categorydata = [];
       data.map((item) => {
-        if (item.category === pair) categorydata.push(item);
+        if (item.category === pair && item.gender.trim().toLowerCase() === gender.trim().toLowerCase()) categorydata.push(item);
       });
       return categorydata;
     });
