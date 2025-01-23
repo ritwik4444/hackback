@@ -62,7 +62,6 @@ app.get("/api/products", (req, res) => {
     .on("data", (data) => results.push(data))
     .on("end", () => {
       const randomProducts = getRandomItems(results, 100); // Get 100 random products
-      console.log(30,{randomProducts})
       res.json({ data: randomProducts });
     })
     .on("error", (err) => {
