@@ -4,6 +4,8 @@ const fs = require("fs");
 const csv = require("csv-parser");
 const path = require("path");
 const cors = require("cors");
+const main = require('./temp.js');
+
 
 const app = express();
 const PORT = 3001;
@@ -19,7 +21,7 @@ const loadCsvData = () => {
     fs.createReadStream(csvFilePath)
       .pipe(csv())
       .on("data", (row) => {
-          rows.push(row);
+        rows.push(row);
       })
       .on("end", () => {
         resolve(rows);
@@ -41,8 +43,8 @@ const occasionCompatibility = {
 
 // Category pairing rules
 const categoryPairing = {
-  topwear: ["bottomwear", "accessories", "footwear"],
-  bottomwear: ["topwear", "accessories", "footwear"],
+  topwear: ["bottomwear", "bottomwear", "footwear"],
+  bottomwear: ["topwear", "topwear", "footwear"],
   accessories: ["topwear", "bottomwear", "footwear"],
   footwear: ["topwear", "bottomwear", "accessories"],
   "plus size": ["bottomwear", "accessories", "footwear"],
@@ -91,7 +93,9 @@ app.get("/api/product", (req, res) => {
       if (product) {
         res.json({ product });
       } else {
-        res.status(404).json({ error: `Product with style_id "${style_id}" not found.` });
+        res
+          .status(404)
+          .json({ error: `Product with style_id "${style_id}" not found.` });
       }
     })
     .on("error", (err) => {
@@ -103,56 +107,9 @@ app.get("/api/product", (req, res) => {
 app.get("/recommendations/:style_id", async (req, res) => {
   try {
     const styleId = req.params.style_id;
-    const { gender } = req.query; 
+    const recommendations=await main(styleId)
 
-    if (!styleId) {
-      return res.status(400).json({ error: "Invalid style_id" });
-    }
-
-    if (!gender) {
-        return res.status(400).json({ error: "Gender query parameter is required." });
-      }
-
-    // Load CSV data dynamically
-    const data = await loadCsvData();
-
-    // Find the product with the given style_id
-    const product = data.find((item) => item.style_id == styleId);
-
-    if (!product) {
-      return res
-        .status(404)
-        .json({ error: `No product found with style_id ${styleId}` });
-    }
-
-    const category = product.category.trim();
-
-    // Validate category against pairing rules
-    if (!categoryPairing[category]) {
-      return res
-        .status(400)
-        .json({ error: `Unknown category '${category}' in product data.` });
-    }
-
-    // Get the array of paired categories for the given category
-    const pairedCategories = categoryPairing[category];
-
-    const recommendedDataArray = pairedCategories.map((pair) => {
-      let categorydata = [];
-      data.map((item) => {
-        if (item.category === pair && item.gender.trim().toLowerCase() === gender.trim().toLowerCase()) categorydata.push(item);
-      });
-      return categorydata;
-    });
-
-    const recommendations = recommendedDataArray.map((recommendation) => {
-      const itemLength = recommendation.length;
-      const randomIndex = Math.floor(Math.random() * itemLength);
-      return recommendation[randomIndex];
-    });
-
-    res.json({
-      productDetails: product,
+     res.json({
       recommendedProducts: recommendations,
     });
   } catch (error) {
